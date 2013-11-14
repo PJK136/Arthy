@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.*;
-import java.util.StringTokenizer;
 
 public final class SMSDecoder {
 	static private Connection m_connexion;
@@ -122,11 +121,12 @@ public final class SMSDecoder {
 
 	static public String decoderPhrase(String phrase)
 	{
-		String decode = phrase.replaceAll("&", " et ").replaceAll("\\+", " plus ").replaceAll("@", "a");
-		StringTokenizer tokens = new StringTokenizer(Sanitizer.sanitize(decode));
-		while (tokens.hasMoreTokens())
+		String decode = phrase.replace("&", " et ").replace("+", " plus ").replace("@", "a").replace("’", "'")
+				.replace("œ", "oe").replace("Œ", "OE")
+				.replace("æ", "ae").replace("Æ", "AE");
+		for (String sms : Sanitizer.split(decode))
 		{
-			String token = tokens.nextToken();
+			String token = Sanitizer.sanitize(sms);
 			if (token.equalsIgnoreCase("sms")|| token.equalsIgnoreCase("mot"))
 				continue;
 			String mot = decoderMot(token);
