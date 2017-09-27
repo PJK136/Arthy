@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Arthy</title>
+        <link type="text/css" rel="stylesheet" href="style.css"/>
+        <link rel="shortcut icon" href="logo.png" type="image/x-icon" />
+        <script type="text/javascript">
+            function fcs(t){
+                    if (t.value==t.defaultValue)
+                    {
+                        t.value = '';
+                        t.style.color = "#000000";
+                        t.style.fontStyle = "normal";
+                        if (document.selection && document.selection.clear)
+                            document.selection.clear();
+                    }
+            }
+            function blr(t){
+                    if (t.value == '')
+                    {
+                        t.value = t.defaultValue;
+                        t.removeAttribute('style');
+                    }
+            }
+        </script>
+        <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+        <script src='vertxbus.js'></script>
+        <script>
+            var eb = new vertx.EventBus('/chat');
+            eb.onopen = function() {
+                document.getElementById("conversation").innerHTML += '*** Connecté !<br/><br/>';
+            }
+            
+            eb.onclose = function() {
+                document.getElementById("conversation").innerHTML += '*** Déconnecté ...<br/><br/>';
+            }
+            
+            function envoyer_message() {
+                var reponse = document.getElementById("boite");
+                if (reponse.value != reponse.defaultValue)
+                {
+                    document.getElementById("boite").disabled = true;
+                    document.getElementById("envoyer").disabled = true;
+                    eb.send('message', {phrase: reponse.value}, function(message) {
+                        document.getElementById("boite").disabled = false;
+                        document.getElementById("envoyer").disabled = false;
+                        document.getElementById("boite").focus();
+                        fcs(document.getElementById("boite"));
+                        var parse = JSON.parse(JSON.stringify(message));
+                        
+                        if (parse.phrase == '' || parse.reponse == '')
+                            return;
+                        
+                        var date = new Date();
+                        var conversation = document.getElementById("conversation");
+                        conversation.innerHTML += '<span class="date">(' + (date.getHours() < 10 ? '0' + date.getHours() : date.getHours())
+                                                                   + ':' + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes())
+                                                                   + ':' + (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds())
+                                                                   + ')</span>' + '<span class="nom">Moi :</span> ';
+                        conversation.appendChild(document.createTextNode(parse.phrase));
+                        conversation.innerHTML += '<br/>';
+                        conversation.innerHTML += '<span class="nom">Arthy :</span> ';
+                        conversation.appendChild(document.createTextNode(parse.reponse));
+                        conversation.innerHTML += '<br /><br />';
+                        document.getElementById("cadre").scrollTop = document.getElementById("cadre").scrollHeight;
+                    });
+                    reponse.value = '';
+                }
+                return false;
+            }
+        </script>
+    </head>
+    <body>
+        <header>
+            <img id="logo" src="logo.svg" alt="Arthy"/>
+        </header>
+        <div id="corps">
+            <div id="cadre">
+                <p id="conversation">*** Connexion ...<br/></p>
+            </div>
+            <form id="saisie" onsubmit="return envoyer_message()">
+                <input id="boite" type="text" value="Écrivez votre message ici" onfocus="fcs(this)" onblur="blr(this)" autocomplete="off">
+                <input id="envoyer" type="submit" value="Envoyer">
+            </form>
+        </div>
+        <footer>
+            <p>Arthy est une intelligence artificielle apprenant des conversations de toutes origines,<br/>
+		ce qu'il dit peut au mieux sembler humain mais au pire être inapproprié, ne l'oubliez pas :)<br/></p>
+            <p id="copyright">© 2013-2014 Paul Du - Tous droits réservés - <a href="mailto:du.paul136@gmail.com">Contact</a></p>
+        </footer>
+    </body>
+</html>
