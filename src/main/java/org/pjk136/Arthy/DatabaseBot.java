@@ -1,6 +1,7 @@
 package org.pjk136.Arthy;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
 import java.util.AbstractMap.SimpleEntry;
@@ -47,7 +48,7 @@ public final class DatabaseBot {
     {
         TO
     }
-    
+
     static public class FrAnalyzer extends Analyzer
     {
     	private FrenchAnalyzer m_analyzer;
@@ -60,22 +61,22 @@ public final class DatabaseBot {
 			return m_analyzer.tokenStream(fieldName, reader);
 		}
     }
-    
+
     static public class SimilarityBot extends DefaultSimilarity
     {
 		private static final long serialVersionUID = 1L;
-		
+
 		@Override
 		public float tf(int freq) {
 			return 1.0f;
 		}
-		
+
 		@Override
 		public float tf(float freq) {
 			return 1.0f;
 		}
     }
-    
+
     public class NodePhrase
     {
     	private Node m_node;
@@ -83,7 +84,7 @@ public final class DatabaseBot {
     	{
     		m_node = node;
     	}
-    	
+
     	public long getId()
     	{
     		try (Transaction tx = m_database.beginTx())
@@ -91,7 +92,7 @@ public final class DatabaseBot {
     			return m_node.getId();
     		}
     	}
-    	
+
     	public String getPhrase()
     	{
     		try (Transaction tx = m_database.beginTx())
@@ -99,7 +100,7 @@ public final class DatabaseBot {
     			return (String) m_node.getProperty("phrase");
     		}
     	}
-    	
+
     	public Boolean hasRelations()
     	{
     		try (Transaction tx = m_database.beginTx())
@@ -118,16 +119,16 @@ public final class DatabaseBot {
     		}
     	}
     }
-    
+
     public class RelationPhrase implements Comparable<RelationPhrase>
     {
     	private Relationship m_relation;
-    	
+
     	private RelationPhrase(Relationship relation)
     	{
     		m_relation = relation;
     	}
-    	
+
     	public int getCount()
     	{
     		int count = 0;
@@ -138,7 +139,7 @@ public final class DatabaseBot {
     		}
     		return count;
     	}
-    	
+
     	public NodePhrase getEndNode()
     	{
     		try (Transaction tx = m_database.beginTx())
@@ -152,7 +153,7 @@ public final class DatabaseBot {
 			return ((Integer) getCount()).compareTo(b.getCount());
 		}
     }
-    
+
 	public final static DatabaseBot getInstance()
 	{
 		if (DatabaseBot.instance == null)
@@ -174,10 +175,10 @@ public final class DatabaseBot {
 		}
 		return DatabaseBot.instance;
 	}
-	
+
 	private DatabaseBot()
 	{
-    	m_database = new GraphDatabaseFactory().newEmbeddedDatabase("conversation.db");
+    	m_database = new GraphDatabaseFactory().newEmbeddedDatabase(new File("conversation.db"));
     	try (Transaction tx = m_database.beginTx())
     	{
     		m_index_exact = m_database.index().forNodes("phrase-exact");
@@ -186,7 +187,7 @@ public final class DatabaseBot {
     		m_questions_sans_suite = new Vector<>();
     		tx.success();
     	}
-    	
+
     	Runtime.getRuntime().addShutdownHook(new Thread()
         {
             @Override
@@ -195,7 +196,7 @@ public final class DatabaseBot {
                 m_database.shutdown();
             }
         });
-    	
+
     	updateQuestionsSansSuite();
 		Timer timer = new Timer();
 		timer.scheduleAtFixedRate(new TimerTask() {
@@ -204,7 +205,7 @@ public final class DatabaseBot {
 				updateQuestionsSansSuite();
 			}}, 5*60*1000, 5*60*1000);
 	}
-	
+
 	public NodePhrase getNodeById(long id)
 	{
 		try (Transaction tx = m_database.beginTx())
@@ -212,7 +213,7 @@ public final class DatabaseBot {
 			return new NodePhrase(m_database.getNodeById(id));
 		}
 	}
-	
+
 	public NodePhrase trouverMessageExact(String message)
 	{
 		Boolean estQuestion = message.contains("?");
@@ -224,20 +225,20 @@ public final class DatabaseBot {
 			IndexHits<Node> results = m_index_exact.get(estQuestion ? "question" : "phrase", message);
 			for (Node result : results)
 			{
-				if (message.equals((String)result.getProperty("phrase")));
+				if (message.equals(result.getProperty("phrase")))
 					return new NodePhrase(result);
 			}
 		}
 		return null;
 	}
-	
+
 	public List<NodePhrase> recherchePrecise(String message)
 	{
 		Boolean estQuestion = message.contains("?");
 		message = Sanitizer.sanitize(message).toLowerCase();
 		if (message.isEmpty())
 			return new LinkedList<>();
-			
+
 		List<NodePhrase> phrases = new LinkedList<>();
 		try (Transaction tx = m_database.beginTx())
 		{
@@ -260,16 +261,16 @@ public final class DatabaseBot {
 
 		return phrases;
 	}
-	
+
 	public List<SimpleEntry<NodePhrase, Double>> rechercheApproximative(String message)
 	{
 		Boolean estQuestion = message.contains("?");
 		message = Sanitizer.sanitize(message);
 		if (message.isEmpty())
 			return null;
-		
+
 		int nb_token = new StringTokenizer(message).countTokens();
-		
+
 		List<SimpleEntry<NodePhrase, Double>> best = new LinkedList<>();
 		PriorityQueue<SimpleEntry<NodePhrase, Double>> phrases = new PriorityQueue<>(5, Collections.reverseOrder(new ComparatorNodePhraseDouble()));
 		try (Transaction tx = m_database.beginTx())
@@ -282,7 +283,7 @@ public final class DatabaseBot {
 			{
 				if (!phrase.hasRelationship(Direction.OUTGOING, RelTypes.TO))
 					continue;
-				
+
 				double score = results.currentScore();
 				if (score != lastScore)
 				{
@@ -291,11 +292,11 @@ public final class DatabaseBot {
 					if (count > 3 || phrases.size() > 5)
 						break;
 				}
-				
+
 				phrases.add(new SimpleEntry<NodePhrase, Double>(new NodePhrase(phrase),
 						score*1.f/Math.sqrt(Math.abs((double)new StringTokenizer(Sanitizer.sanitize((String) phrase.getProperty("phrase"))).countTokens()-nb_token)+1)));
 			}
-			
+
 			count = 0;
 			lastScore = 0;
 			double first = 0;
@@ -304,7 +305,7 @@ public final class DatabaseBot {
 				double score = phrase.getValue();
 				if (first == 0)
 					first = 1.f/score;
-				
+
 				phrase.setValue(phrase.getValue()*first);
 				if (score != lastScore)
 				{
@@ -315,11 +316,11 @@ public final class DatabaseBot {
 				}
 				best.add(phrase);
 			}
-				
+
 		} catch (Exception e) {
 			return best;
 		}
-		
+
 		return best;
 	}
 
@@ -331,39 +332,39 @@ public final class DatabaseBot {
 			return Double.compare(arg0.getValue(),arg1.getValue());
 		}
 	}
-	
+
 	public Vector<Long> questionsSansSuite()
 	{
 		return m_questions_sans_suite;
 	}
-	
+
 	private void updateQuestionsSansSuite()
 	{
 		Vector<Long> questions_sans_suite = new Vector<>();
-		
+
 		try (Transaction tx = m_database.beginTx())
 		{
 			Iterable<Node> nodes = GlobalGraphOperations.at(m_database).getAllNodes();
-			
+
 			for (Node node : nodes)
 			{
 				Long relationCount = (long) 0;
 				for (@SuppressWarnings("unused") Relationship relation : node.getRelationships(Direction.OUTGOING))
 					relationCount++;
-				
+
 				if (relationCount < 3 && ((String)node.getProperty("phrase")).contains("?"))
 					questions_sans_suite.add(node.getId());
 			}
 		}
-			
+
 		synchronized(DatabaseBot.class)
 		{
-			m_questions_sans_suite = questions_sans_suite; 
+			m_questions_sans_suite = questions_sans_suite;
 		}
 	}
-	
+
 	public NodePhrase ajouterPhrase(String message)
-	{		
+	{
 		try (Transaction tx = m_database.beginTx())
 		{
 			Node node = m_database.createNode();
@@ -373,7 +374,7 @@ public final class DatabaseBot {
 			return new NodePhrase(node);
 		}
 	}
-	
+
 	private void indexer(Node node, String message)
 	{
 		if (message.contains("?"))
@@ -387,15 +388,15 @@ public final class DatabaseBot {
 			m_index_exact.add(node, "phrase", message);
 			m_index_simple_analyzer.add(node, "phrase", Sanitizer.sanitize(message).toLowerCase());
 			m_index_french_analyzer.add(node, "phrase", Sanitizer.sanitize(message));
-		}		
+		}
 	}
-	
+
 	public void ajouterRelation(NodePhrase a, NodePhrase b)
 	{
 		try (Transaction tx = m_database.beginTx())
 		{
 			boolean found = false;
-			
+
 			if (a.m_node.hasRelationship(Direction.OUTGOING))
 			{
 				for (Relationship relation : a.m_node.getRelationships(Direction.OUTGOING, RelTypes.TO))
@@ -408,7 +409,7 @@ public final class DatabaseBot {
 					}
 				}
 			}
-			
+
 			if (!found)
 			{
 				Relationship to = a.m_node.createRelationshipTo(b.m_node, RelTypes.TO);
@@ -417,7 +418,7 @@ public final class DatabaseBot {
 			tx.success();
 		}
 	}
-	
+
 	public void charger(String fichier)
 	{
 		int count = 0;
@@ -434,7 +435,7 @@ public final class DatabaseBot {
 
 				if (ligne.isEmpty())
 					continue;
-					
+
 				if (ligne.contentEquals("###") || ligne.contentEquals("---") ||
 					(ligne = Sanitizer.format(Sanitizer.removeEmoticones(SMSDecoder.decoderPhrase(ligne)))).isEmpty())
 				{
@@ -471,7 +472,7 @@ public final class DatabaseBot {
 				m_index_french_analyzer.delete();
 				tx.success();
 			}
-	
+
 			try (Transaction tx = m_database.beginTx())
 			{
 				m_index_exact = m_database.index().forNodes("phrase-exact");
@@ -479,7 +480,7 @@ public final class DatabaseBot {
 				m_index_french_analyzer = m_database.index().forNodes("phrase-french-analyzer", MapUtil.stringMap(IndexManager.PROVIDER, "lucene", "analyzer", FrAnalyzer.class.getName(), "similarity", SimilarityBot.class.getName()));
 
 				Iterable<Node> nodes = GlobalGraphOperations.at(m_database).getAllNodes();
-				
+
 				for (Node node : nodes)
 				{
 					indexer(node, (String)node.getProperty("phrase"));
@@ -488,14 +489,14 @@ public final class DatabaseBot {
 			}
 		}
 	}
-	
+
 	public List<SimpleEntry<Long, String>> trouverRelationsBoucle()
 	{
 		List<SimpleEntry<Long, String>> result = new LinkedList<SimpleEntry<Long, String>>();
 		try (Transaction tx = m_database.beginTx())
 		{
 			Iterable<Relationship> relationShips = GlobalGraphOperations.at(m_database).getAllRelationships();
-			
+
 			for (Relationship relation : relationShips)
 			{
 				if (relation.getStartNode().equals(relation.getEndNode()))
@@ -505,14 +506,14 @@ public final class DatabaseBot {
 
 		return result;
 	}
-	
+
 	List<SimpleEntry<Long, String>> chercherMots(String mots)
 	{
 		Boolean estQuestion = mots.contains("?");
 		mots = Sanitizer.sanitize(mots).toLowerCase();
 		if (mots.isEmpty())
 			return new LinkedList<>();
-			
+
 		List<SimpleEntry<Long, String>> phrases = new LinkedList<>();
 		try (Transaction tx = m_database.beginTx())
 		{
@@ -535,13 +536,13 @@ public final class DatabaseBot {
 		morceau = morceau.toLowerCase();
 		if (morceau.isEmpty())
 			return new LinkedList<>();
-			
+
 		List<SimpleEntry<Long, String>> phrases = new LinkedList<>();
-		
+
 		try (Transaction tx = m_database.beginTx())
 		{
 			Iterable<Node> nodes = GlobalGraphOperations.at(m_database).getAllNodes();
-			
+
 			for (Node node : nodes)
 			{
 				String message = (String)node.getProperty("phrase");
@@ -556,7 +557,7 @@ public final class DatabaseBot {
 
 		return phrases;
 	}
-	
+
 	void setNode(Long id, String message)
 	{
 		try (Transaction tx = m_database.beginTx())
@@ -566,7 +567,7 @@ public final class DatabaseBot {
 			tx.success();
 		}
 	}
-	
+
 	void supprimerNode(Long id)
 	{
 		try (Transaction tx = m_database.beginTx())
@@ -582,7 +583,7 @@ public final class DatabaseBot {
 			tx.success();
 		}
 	}
-	
+
 	void supprimerRelation(Long id)
 	{
 		try (Transaction tx = m_database.beginTx())
@@ -597,7 +598,7 @@ public final class DatabaseBot {
 		try (Transaction tx = m_database.beginTx())
 		{
 			Iterable<Node> nodes = GlobalGraphOperations.at(m_database).getAllNodes();
-			
+
 			for (Node node : nodes)
 			{
 				String before = (String)node.getProperty("phrase");
@@ -610,15 +611,15 @@ public final class DatabaseBot {
 						node.setProperty("phrase", after);
 				}
 			}
-			
+
 			if (corriger)
 				tx.success();
 		}
 	}
-	
+
 	public void hotfix(Boolean corriger) {
 		Iterable<SimpleEntry<Long, String>> nodes = chercherExact("est'est");
-		
+
 		try (Transaction tx = m_database.beginTx())
 		{
 			for (SimpleEntry<Long, String> node : nodes)
@@ -630,13 +631,13 @@ public final class DatabaseBot {
 				if (corriger)
 					m_database.getNodeById(node.getKey()).setProperty("phrase", after);
 			}
-			
+
 			if (corriger)
 				tx.success();
 		}
-		
+
 		nodes = chercherExact("es'es");
-		
+
 		try (Transaction tx = m_database.beginTx())
 		{
 			for (SimpleEntry<Long, String> node : nodes)
@@ -648,7 +649,7 @@ public final class DatabaseBot {
 				if (corriger)
 					m_database.getNodeById(node.getKey()).setProperty("phrase", after);
 			}
-			
+
 			if (corriger)
 				tx.success();
 		}

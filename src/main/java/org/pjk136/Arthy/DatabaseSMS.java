@@ -12,7 +12,7 @@ public final class DatabaseSMS {
 	private static volatile DatabaseSMS instance = null;
 
 	private Connection m_connexion;
-	
+
 	private DatabaseSMS() throws ClassNotFoundException, SQLException
 	{
 		Class.forName("org.sqlite.JDBC");
@@ -25,7 +25,7 @@ public final class DatabaseSMS {
 				" MOT_ID         INT     NOT NULL," +
 				" FOREIGN KEY(MOT_ID) REFERENCES MOTS(ID))");
 		executeStatementUpdate("CREATE INDEX IF NOT EXISTS SMS_INDEX ON SMS(SMS)");
-		
+
 		Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override
@@ -65,7 +65,7 @@ public final class DatabaseSMS {
 	public String decoderMot(String sms)
 	{
 		Statement statement = null;
-		ResultSet result = null; 
+		ResultSet result = null;
 		try
 		{
 			statement = m_connexion.createStatement();
@@ -87,7 +87,7 @@ public final class DatabaseSMS {
 		}
 		return sms;
 	}
-	
+
 	public void charger(String fichier)
 	{
 		int count = 0;
@@ -128,10 +128,10 @@ public final class DatabaseSMS {
 			return;
 		}
 	}
-	
+
 	private void executeStatementUpdate(String sql) throws SQLException
 	{
-		Statement statement = m_connexion.createStatement(); 
+		Statement statement = m_connexion.createStatement();
 		statement.executeUpdate(sql);
 		statement.close();
 	}
@@ -161,7 +161,7 @@ public final class DatabaseSMS {
 		try
 		{
 			int id_mot = 0;
-			Statement statement = m_connexion.createStatement(); 
+			Statement statement = m_connexion.createStatement();
 			statement.executeUpdate(String.format("INSERT INTO MOTS (MOT) VALUES(\"%s\")", mot));
 			id_mot = statement.getGeneratedKeys().getInt(1);
 			statement.close();

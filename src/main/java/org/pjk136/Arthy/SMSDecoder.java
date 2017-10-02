@@ -1,18 +1,18 @@
 package org.pjk136.Arthy;
 
 public final class SMSDecoder {
-	private static DatabaseSMS m_database; 
-	
+	private static DatabaseSMS m_database;
+
 	static
 	{
 		m_database = DatabaseSMS.getInstance();
 	}
-	
+
 	private SMSDecoder()
 	{
-		
+
 	}
-	
+
 	static public String decoderPhrase(String phrase)
 	{
 		String decode = phrase.replace("&", " et ").replace("+", " plus ").replace("@", "a").replace("’", "'")
@@ -34,5 +34,5 @@ public final class SMSDecoder {
 		}
 		return decode;
 	}
-	
+
 }

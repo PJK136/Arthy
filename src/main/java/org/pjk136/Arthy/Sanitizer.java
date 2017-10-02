@@ -7,9 +7,9 @@ import java.util.regex.Pattern;
 public final class Sanitizer {
 	private Sanitizer()
 	{
-		
+
 	}
-	
+
 	static private String[][] emoticones = {
 	{":-)", ">:)",":)", "*:))", "(:", ":o)", ":]","=]", "=)", ":}", ":^)",":c)",">:-)", "}:-)", "}:)","0:-)", "0:)","O:-)","#-)", ":>", "^^", "^_^"},
 	{":-D", ":D", "x-D", "xD", "=-D", "=D", "x)", "B^D", ":'-)", ":')", "|-O"},
@@ -44,7 +44,7 @@ public final class Sanitizer {
 		}
 		return message;
 	}
-	
+
 	static public List<Integer> identifyEmoticones(String message)
 	{
 		List<Integer> ids = new LinkedList<Integer>();
@@ -62,7 +62,7 @@ public final class Sanitizer {
 		}
 		return ids;
 	}
-	
+
 	static public String getEmoticones(List<Integer> ids)
 	{
 		String message = new String();
@@ -74,37 +74,37 @@ public final class Sanitizer {
 		}
 		return message.trim();
 	}
-	
+
 	static public String ponctuation_to_whitespace(String phrase)
 	{
 		return removeEmoticones(phrase).replaceAll("[()\\[\\],.:;!?|_…«»\"“”<>]", " ");
 	}
-	
+
 	static public String[] split(String phrase)
 	{
 		return ponctuation_to_whitespace(phrase).split(" ");
 	}
-	
+
 	static public String sanitize(String phrase)
 	{
 		return ponctuation_to_whitespace(phrase).replaceAll("(?iu)[^a-z0-9⁰¹²-⁹ éèêëâàôûùîïçœ€\\$%\\-']", "").trim();
 	}
-	
+
 	static private String fix_double_ponctuation(String original, String ponctuation)
 	{
 		return original.replaceAll(Pattern.quote(ponctuation)+"+", ponctuation);
 	}
-	
+
 	static private String fix_ponctuation_gauche(String original, String ponctuation)
 	{
 		return fix_double_ponctuation(original, ponctuation).replaceAll(Pattern.quote(ponctuation) + "\\s+", ponctuation).replace(ponctuation, " " + ponctuation);
 	}
-	
+
 	static private String fix_ponctuation_droite(String original, String ponctuation)
 	{
 		return fix_double_ponctuation(original, ponctuation).replaceAll("\\s+" + Pattern.quote(ponctuation), ponctuation).replace(ponctuation, ponctuation + " ");
 	}
-	
+
 	static private String fix_ponctuation_double(String original, String ponctuation)
 	{
 		return fix_double_ponctuation(original, ponctuation).replace(ponctuation, " " + ponctuation + " ");
@@ -120,14 +120,14 @@ public final class Sanitizer {
 		phrase = fix_ponctuation_double(phrase, "?");
 		phrase = fix_ponctuation_double(phrase, "«");
 		phrase = fix_ponctuation_double(phrase, "»");
-		
+
 		phrase = fix_ponctuation_gauche(phrase, "(");
 		phrase = fix_ponctuation_droite(phrase, ")");
 		phrase = fix_ponctuation_gauche(phrase, "[");
 		phrase = fix_ponctuation_droite(phrase, "]");
 		phrase = fix_ponctuation_gauche(phrase, "{");
 		phrase = fix_ponctuation_droite(phrase, "}");
-		
+
 		phrase = phrase.replace("..", "…");
 		phrase = phrase.replace("...", "…");
 	    phrase = fix_ponctuation_droite(phrase, ".");
@@ -142,14 +142,14 @@ public final class Sanitizer {
 		phrase = fix_typography(phrase);
 		if (phrase.isEmpty())
 			return "";
-		
+
 		if (phrase.endsWith(".") || phrase.endsWith("?") || phrase.endsWith("!") || phrase.endsWith(";") || phrase.endsWith(",") ||
-			phrase.endsWith(":") || phrase.endsWith("…")) 
+			phrase.endsWith(":") || phrase.endsWith("…"))
 			return Character.toUpperCase(phrase.charAt(0)) + phrase.substring(1);
 		else
 			return Character.toUpperCase(phrase.charAt(0)) + phrase.substring(1, phrase.length()) + ".";
 	}
-	
+
 	static public Boolean isUnicode(String message)
 	{
 		return message.matches("[^\\x00-\\xFF€]");

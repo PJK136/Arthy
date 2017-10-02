@@ -26,7 +26,7 @@ public final class Arthy {
 		public boolean handlePreRegister(SockJSSocket arg0, String arg1) {
 			return true;
 		}
-		
+
 		@Override
 		public void handlePostRegister(SockJSSocket arg0, String arg1) {
 		}
@@ -41,13 +41,13 @@ public final class Arthy {
 			System.out.println("Sockjs " + arg0.writeHandlerID() + " créé !");
 			return true;
 		}
-		
+
 		@Override
 		public boolean handleAuthorise(JsonObject arg0, String arg1,
 				Handler<AsyncResult<Boolean>> arg2) {
 			return true;
 		}
-		
+
 		@Override
 		public boolean handleSendOrPub(SockJSSocket sock, boolean send, JsonObject msg, String address)
 		{
@@ -61,16 +61,17 @@ public final class Arthy {
 			System.out.println("Sockjs " + sock.writeHandlerID() + " fermé !");
 		}
 	};
-	
+
 	public static void init()
 	{
 		PlatformManager pm = PlatformLocator.factory.createPlatformManager();
 		DatabaseSMS.getInstance();
 		DatabaseBot.getInstance();
-		
+
 		HttpServer httpServer = pm.vertx().createHttpServer();
 		httpServer.requestHandler(new Handler<HttpServerRequest>() {
-			public void handle(HttpServerRequest request) {
+			@Override
+            public void handle(HttpServerRequest request) {
 				String file = "";
 				if (request.path().equals("/"))
 					file = "index.html";
@@ -86,7 +87,8 @@ public final class Arthy {
 		sockJSServer.setHook(new ServerHook());
 		sockJSServer.bridge(config, inboundPermitted, new JsonArray().add(new JsonObject()));
 		pm.vertx().eventBus().registerHandler("message", new Handler<JsonObjectMessage>() {
-			public void handle(JsonObjectMessage message) {
+			@Override
+            public void handle(JsonObjectMessage message) {
 				JsonObject reponse = new JsonObject();
 				System.out.println("Message reçu : " + message.body().toString());
 				try
@@ -101,7 +103,7 @@ public final class Arthy {
 					reponse = new JsonObject();
 					reponse.putString("phrase", message.body().toString());
 					reponse.putString("reponse", "Woops ! Ton message était tellement philosophique que mon programme interne a planté...");
-					
+
 				}
 				System.out.println("Réponse : " + reponse.getString("reponse"));
 				message.reply(reponse);
@@ -110,7 +112,7 @@ public final class Arthy {
 
 		httpServer.listen(8080);
 	}
-	
+
 	public static void main(String[] args) throws IOException, ParseException
 	{
 		init();
@@ -173,7 +175,7 @@ public final class Arthy {
 				{
 					long start = Long.valueOf(phrase.split(" ", 4)[2]);
 					long stop = Long.valueOf(phrase.split(" ", 4)[3]);
-					
+
 					for (long i = start; i <= stop ; i++)
 						DatabaseBot.getInstance().supprimerNode(i);
 
@@ -183,10 +185,10 @@ public final class Arthy {
 				{
 					long start = Long.valueOf(phrase.split(" ", 4)[2]);
 					long stop = Long.valueOf(phrase.split(" ", 4)[3]);
-					
+
 					for (long i = start; i <= stop ; i++)
 						DatabaseBot.getInstance().supprimerRelation(i);
-					
+
 					System.out.println(String.valueOf(stop-start+1) + " relations supprimés !");
 				}
 				else if (phrase.startsWith("sms "))
@@ -202,11 +204,11 @@ public final class Arthy {
 			{
 				e.printStackTrace();
 			}
-			
+
 			System.out.print(">>> ");
 		} while (!(phrase = input.nextLine()).startsWith("exit"));
 		input.close();
-		
+
 		System.exit(0);
 	}
 }

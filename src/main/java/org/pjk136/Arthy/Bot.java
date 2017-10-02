@@ -1,19 +1,18 @@
 package org.pjk136.Arthy;
+import java.io.File;
+import java.io.PrintWriter;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.Comparator;
 import java.util.Random;
 import java.util.Vector;
 
 import org.pjk136.Arthy.DatabaseBot.NodePhrase;
 import org.pjk136.Arthy.DatabaseBot.RelationPhrase;
-
-import java.io.File;
-import java.io.PrintWriter;
 
 public class Bot {
 	private static HashMap<String, Bot> m_instances;
@@ -26,7 +25,7 @@ public class Bot {
     static {
     	m_instances = new HashMap<String, Bot>();
     	m_database = DatabaseBot.getInstance();
-    	
+
     	Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override
@@ -36,10 +35,10 @@ public class Bot {
                 	bot.finalize();
             }
         } );
-    	
+
     	new File("logs").mkdir();
     }
-    
+
     static public Bot getBot(String uuid)
     {
     	if (m_instances.get(uuid) != null)
@@ -49,20 +48,20 @@ public class Bot {
     		return new Bot(uuid);
     	}
     }
-    
+
     static public void removeBot(String uuid)
     {
     	if (m_instances.get(uuid) != null)
     		m_instances.get(uuid).flushFile();
     	m_instances.remove(uuid);
     }
-    
+
     static public void flushFiles()
     {
     	for (Bot bot : m_instances.values())
         	bot.flushFile();
     }
-    
+
 	private Bot(String uuid) {
 		m_previous = null;
 		m_repetition = 0;
@@ -74,8 +73,9 @@ public class Bot {
 			e.printStackTrace();
 		}
 	}
-	
-	public void finalize()
+
+	@Override
+    public void finalize()
 	{
 		try {
 			if (m_fichier != null)
@@ -98,7 +98,7 @@ public class Bot {
 		if (m_fichier != null)
 			m_fichier.flush();
 	}
-	
+
 	private static String reponses_repetitions[] = {"Répètera bien qui répètera le dernier !",
 		"Si tu continues, je pourrais faire de même et on verra qui tiendra le plus longtemps !",
 		"En effet, c'est ce que j'ai dit !", "Tiens, tu répètes ce que je dis :-D.", "Bravo, tu sais copier une phrase !",
@@ -115,13 +115,13 @@ public class Bot {
 			m_repetition = 0;
 			if (m_repetition_mode)
 				writeFile("Mode de répétition désactivé ...");
-			
+
 			m_repetition_mode = false;
 			writeFile("Il y a des caractères Unicode ...");
 			writeFile("Bot : Malheureusement, je ne supporte pas encore les caractères Unicodes :-(.");
 			return new SimpleEntry<String, String>(message, "Malheureusement, je ne supporte pas encore les caractères Unicode :-(.");
 		}
-		
+
 		String message_format = Sanitizer.format(Sanitizer.removeEmoticones(SMSDecoder.decoderPhrase(message)));
 		writeFile("Décodé : " + message_format);
 		if (message_format.isEmpty())
@@ -133,8 +133,8 @@ public class Bot {
 				writeFile("Désactivation du mode de répétition ...");
 				writeFile("Bot : Bah ... Tu ne me répètes plus ? :-D");
 				return new SimpleEntry<String, String>(message, "Bah ... Tu ne me répètes plus ? :-D");
-			}	
-			
+			}
+
 			List<Integer> ids_emoticones = Sanitizer.identifyEmoticones(message);
 			if (ids_emoticones.size() == 0)
 			{
@@ -153,7 +153,7 @@ public class Bot {
 		}
 
 		message = message_format;
-		
+
 		if (m_previous != null)
 		{
 			if (Sanitizer.sanitize(m_previous.getPhrase()).equals(Sanitizer.sanitize(message)))
@@ -164,7 +164,7 @@ public class Bot {
 			}
 			else
 				m_repetition = 0;
-				
+
 			NodePhrase phraseExacte = m_database.trouverMessageExact(message);
 			if (phraseExacte == null)
 				phraseExacte = m_database.ajouterPhrase(message);
@@ -188,7 +188,7 @@ public class Bot {
 							return new SimpleEntry<String, String>(message, message);
 					}
 				}
-				
+
 				if (m_repetition_mode)
 				{
 					m_repetition_mode = false;
@@ -199,7 +199,7 @@ public class Bot {
 		}
 
 		NodePhrase meilleureReponse = recherchePrecise(message);
-		
+
 		if (meilleureReponse == null)
 			meilleureReponse = rechercheApproximative(message);
 
@@ -212,18 +212,18 @@ public class Bot {
 				writeFile("Rien à dire : Utilisation d'une question comme réponse.");
 			}
 		}
-		
+
 		String reponse = "";
 		m_previous = meilleureReponse;
 		if (meilleureReponse != null)
 			reponse = meilleureReponse.getPhrase();
 		else
 			reponse = "Je ne sais pas quoi répondre :/";
-		
+
 		writeFile("Bot : " + reponse);
 		return new SimpleEntry<String, String>(message, reponse);
 	}
-	
+
 	private String reponseRepetition()
 	{
 		m_repetition++;
@@ -242,7 +242,7 @@ public class Bot {
 		}
 		return null;
 	}
-	
+
 	private NodePhrase recherchePrecise(String message)
 	{
 		writeFile("Recherche précise ...");
@@ -256,18 +256,18 @@ public class Bot {
 				for (RelationPhrase relation : phrase.getRelations())
 					relationsReponses.add(relation);
 			}
-			
+
 			if (phrasesPrecises.size() == 1 && relationsReponses.size() == 1)
 			{
 				writeFile("Il y a seulement 1 phrase correspondante avec seulement 1 réponse ... Ne pas envoyer la réponse pour protéger le fil de discussion originale !");
 				return null;
 			}
-			
+
 			if (!relationsReponses.isEmpty())
 			{
 				PriorityQueue<RelationPhrase> relationsSorted = new PriorityQueue<RelationPhrase>(relationsReponses.size(), Collections.reverseOrder());
 				relationsSorted.addAll(relationsReponses);
-				
+
 				List<SimpleEntry<NodePhrase,Integer>> topReponses = new LinkedList<SimpleEntry<NodePhrase,Integer>>();
 				int count = 0;
 				int last_score = 0;
@@ -283,14 +283,14 @@ public class Bot {
 					topReponses.add(new SimpleEntry<>(relationsSorted.poll().getEndNode(), score));
 					count += score;
 				}
-				
+
 				return randomReponse(topReponses, count);
 			}
 		}
-		
+
 		return null;
 	}
-	
+
 	private NodePhrase rechercheApproximative(String message)
 	{
 		writeFile("Recherche approximative ...");
@@ -302,15 +302,15 @@ public class Bot {
 			{
 				writeFile("Trouvé : " + phrase.getKey().getPhrase() + " id :" + phrase.getKey().getId() + " score : " + phrase.getValue());
 				for (RelationPhrase relation : phrase.getKey().getRelations())
-					reponses.add(new SimpleEntry<NodePhrase, Integer>(relation.getEndNode(), (int) Math.ceil((phrase.getValue()*(double)relation.getCount()))));
+					reponses.add(new SimpleEntry<NodePhrase, Integer>(relation.getEndNode(), (int) Math.ceil((phrase.getValue()*relation.getCount()))));
 			}
-			
+
 			if (phrasesApproximatives.size() == 1 && reponses.size() == 1)
 			{
 				writeFile("Il y a seulement 1 phrase correspondante avec seulement 1 réponse ... Ne pas envoyer la réponse pour protéger le fil de discussion originale !");
 				return null;
 			}
-			
+
 			if (!reponses.isEmpty())
 			{
 				PriorityQueue<SimpleEntry<NodePhrase, Integer>> reponsesSorted = new PriorityQueue<SimpleEntry<NodePhrase, Integer>>(reponses.size(),
@@ -321,9 +321,9 @@ public class Bot {
 								return Integer.compare(arg0.getValue(),arg1.getValue());
 							}
 						}));
-				
+
 				reponsesSorted.addAll(reponses);
-				
+
 				List<SimpleEntry<NodePhrase, Integer>> topReponses = new LinkedList<SimpleEntry<NodePhrase, Integer>>();
 				int count = 0;
 				int last_score = 0;
@@ -344,7 +344,7 @@ public class Bot {
 		}
 		return null;
 	}
-	
+
 	private NodePhrase randomReponse(List<SimpleEntry<NodePhrase, Integer>> topReponses, int max)
 	{
 		writeFile("Réponses possibles :");
@@ -358,8 +358,8 @@ public class Bot {
 				break;
 			}
 		}
-		
-		int choix = new Random().nextInt(max);
+
+		int choix = (int) (Math.random()*max);
 		int count = 0;
 		for (SimpleEntry<NodePhrase, Integer> reponse : topReponses)
 		{
@@ -367,7 +367,7 @@ public class Bot {
 			if (choix < count)
 				return reponse.getKey();
 		}
-		
+
 		System.err.println("WTF ! Le random a choisi aucune réponse ! Le choix était : " + choix + " et le maximum était : " + max);
 		return null;
 	}
